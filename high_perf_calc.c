@@ -6,7 +6,7 @@
 #include <sys/time.h>
 #include <string.h>
 
-#if 1
+#if 0
 #define LOG(fmt, args...)           \
     printf("\t%s():%d\t" fmt "\n", __func__, __LINE__, ##args)
 #else
@@ -15,7 +15,7 @@
 
 #define SUFFIX "VON_NEUMANN"
 #define MAXBUFF 512
-#define NUM_OF_TRANSACTIONS 100
+#define NUM_OF_TRANSACTIONS 100000
 
 typedef struct packet_t {
     struct packet_t *next;
@@ -118,7 +118,7 @@ static packet_t *op_to_server(verification_result_t vr, void *data)
         "TIMES",
         "DIVIDE"
     };
-    sprintf(buf, "%s %d %d " SUFFIX, ops[curr_op], random() % 100, 
+    sprintf(buf, "%s %lu %lu " SUFFIX, ops[curr_op], random() % 100, 
             random() % 100);
     curr_op = (curr_op + 1) % NUM_OF_OPS;
     p->payload = strdup(buf);
@@ -260,8 +260,6 @@ static void create_transactions(void)
 
 static void register_cbs(void)
 {
-    int priv_data_size = 0;
-
     init(&ic);
 
     if (!ic.vp) {
@@ -353,7 +351,7 @@ static void print_time_diff(struct timeval *before, struct timeval *after)
   msec = (after->tv_sec - before->tv_sec) * 1000;
   msec += (after->tv_usec - before->tv_usec) / 1000;
 
-  printf("The verification process took %d milliseconds\n", msec);
+  printf("The verification process took %lu milliseconds\n", msec);
 }
 
 int main()
@@ -373,4 +371,6 @@ int main()
 
     print_time_diff(&time_before_test, &time_after_test);
     free_all();
+
+    return 0;
 }
