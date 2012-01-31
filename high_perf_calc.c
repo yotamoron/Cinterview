@@ -1,3 +1,19 @@
+/*
+ * This file is part of Cinterview.
+ * 
+ * Cinterview is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * Cinterview is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Cinterview.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "high_perf_calc.h"
 
@@ -13,9 +29,19 @@
 #define LOG(fmt, args...) do { } while(0)
 #endif
 
-#define SUFFIX "VON_NEUMANN"
 #define MAXBUFF 512
 #define NUM_OF_TRANSACTIONS 100000
+
+#define SUFFIX "VON_NEUMANN"
+#define SECURED "SECURED"
+#define SEPARATE "SEPARATE"
+#define SCRAP "SCRAP"
+#define TRANS_TYPE_PREFIX "START_TRANSACTION"
+
+#define EXTRA_SPACE(vr) (vr == verification_result_space ? " " : "")
+#define BAD_SUFFIX(vr) (vr == verification_result_bad_suffix ? "DEADBEEF" : "")
+
+#define NUM_OF_OPS 4
 
 typedef struct packet_t {
     struct packet_t *next;
@@ -50,100 +76,148 @@ typedef enum {
     trans_type_max,
 } trans_type_t;
 
-#define SECURED "SECURED"
-#define SEPARATE "SEPARATE"
-#define SCRAP "SCRAP"
+static char *trans_types[trans_type_max] = {
+    [trans_type_secured] = SECURED,
+    [trans_type_separate] = SEPARATE,
+    [trans_type_scrap] = SCRAP
+};
+static char *code2str(verification_result_t vr)
+{
+    switch (vr) {
+    default:
+        return "UNKNOWN";
+
+    case verification_result_ok:
+        return "verification_result_ok";
+
+    case  verification_result_space:
+	    return "verification_result_space";
+
+    case verification_result_overflow:
+	    return "verification_result_overflow";
+
+    case verification_result_bad_suffix:
+	    return "verification_result_bad_suffix";
+    }
+}
 
 static packet_t *handshake_to_server(verification_result_t vr, void *data)
 {
-#define TRANS_TYPE_PREFIX "START_TRANSACTION"
-#define TRANS_TYPE_SECURED TRANS_TYPE_PREFIX " " SECURED " " SUFFIX
-#define TRANS_TYPE_SEPARATE TRANS_TYPE_PREFIX " " SEPARATE " " SUFFIX
-#define TRANS_TYPE_SCRAP TRANS_TYPE_PREFIX " " SCRAP " " SUFFIX
     packet_t *p = calloc(1, sizeof(packet_t));
     trans_type_t curr_trans_type = *((trans_type_t *)data);
+    char buf[MAXBUFF] = { 0 };
+    char *extra_space = EXTRA_SPACE(vr);
+    char *bad_suffix = BAD_SUFFIX(vr);
 
-    switch(curr_trans_type) {
-    case trans_type_secured:
-        p->payload = strdup(TRANS_TYPE_SECURED);
-        break;
-    case trans_type_separate:
-        p->payload = strdup(TRANS_TYPE_SEPARATE);
-        break;
-    case trans_type_scrap:
-        p->payload = strdup(TRANS_TYPE_SCRAP);
-        break;
-    default:
-        printf("Unknown transcation type %d\n", curr_trans_type);
-        exit(-1);
-    }
-    LOG("p->payload = %s", p->payload);
-    p->expected_result = verification_result_ok;
+    sprintf(buf, TRANS_TYPE_PREFIX " %s %s" SUFFIX "%s", trans_types[curr_trans_type],
+            extra_space, bad_suffix);
+
+    p->payload = strdup(buf);
+    p->expected_result = vr;
+    LOG("p->payload = %s vr = %s", p->payload, code2str(vr));
     return p;
 }
 
 static packet_t *handshake_from_server(verification_result_t vr, void *data)
 {
+    char buf[MAXBUFF] = { 0 };
     packet_t *p = calloc(1, sizeof(packet_t));
     trans_type_t curr_trans_type = *((trans_type_t *)data);
+    char *extra_space = EXTRA_SPACE(vr);
+    char *bad_suffix = BAD_SUFFIX(vr);
 
-    switch(curr_trans_type) {
-    case trans_type_secured:
-        p->payload = strdup(SECURED " " SUFFIX);
-        break;
-    case trans_type_separate:
-        p->payload = strdup(SEPARATE " " SUFFIX);
-        break;
-    case trans_type_scrap:
-        p->payload = strdup(SCRAP " " SUFFIX);
-        break;
-    default:
-        printf("Unknown transcation type %d\n", curr_trans_type);
-        exit(-1);
-    }
-    LOG("p->payload = %s", p->payload);
-    p->expected_result = verification_result_ok;
+    sprintf(buf, "%s %s" SUFFIX "%s", trans_types[curr_trans_type], 
+            extra_space, bad_suffix);
+
+    p->payload = strdup(buf);
+    p->expected_result = vr;
+    LOG("p->payload = %s vr = %s", p->payload, code2str(vr));
     return p;
+}
+
+static int get_res(char *op, int n1, int n2)
+{
+    if (!strcmp(op, "PLUS")) {
+        return n1 + n2;
+    }
+    if (!strcmp(op, "MINUS")) {
+        return n1 - n2;
+    }
+    if (!strcmp(op, "TIMES")) {
+        return n1 * n2;
+    }
+    if (!strcmp(op, "DIVIDE")) {
+        if (!n2) {
+            return 0;
+        }
+        return (int)(n1 / n2);
+    }
+
+    return 0;
 }
 
 static packet_t *op_to_server(verification_result_t vr, void *data)
 {
     static int curr_op = 0;
+    static int curr_overflow = 1;
     packet_t *p = calloc(1, sizeof(packet_t));
     char buf[MAXBUFF] = { 0 };
-#define NUM_OF_OPS 4
+    char *extra_space = EXTRA_SPACE(vr);
+    char *bad_suffix = BAD_SUFFIX(vr);
+    int n1 = random() % 100;
+    int n2 = random() % 100;
+    int *res = (int *) data;
     static char *ops[NUM_OF_OPS] = {
         "PLUS",
         "MINUS",
         "TIMES",
         "DIVIDE"
     };
-    sprintf(buf, "%s %lu %lu " SUFFIX, ops[curr_op], random() % 100, 
-            random() % 100);
+
+    if (vr == verification_result_overflow) {
+        n2 += (65355 * curr_overflow);
+        curr_overflow *= -1;
+    }
+
+    sprintf(buf, "%s %d %d %s" SUFFIX"%s", ops[curr_op], n1, n2, extra_space, 
+            bad_suffix); 
+    *res = get_res(ops[curr_op], n1, n2);
     curr_op = (curr_op + 1) % NUM_OF_OPS;
     p->payload = strdup(buf);
-    LOG("p->payload = %s", p->payload);
-    p->expected_result = verification_result_ok;
+    LOG("p->payload = %s vr = %s", p->payload, code2str(vr));
+    p->expected_result = vr; 
     return p;
 }
 
 static packet_t *op_from_server(verification_result_t vr, void *data)
 {
     packet_t *p = calloc(1, sizeof(packet_t));
+    char buf[MAXBUFF] = { 0 };
+    char res_buf[MAXBUFF] = { 0 };
+    char *extra_space = EXTRA_SPACE(vr);
+    char *bad_suffix = BAD_SUFFIX(vr);
+    int *res = (int *) data;
 
-    p->payload = strdup("RESULT 100 " SUFFIX);
-    LOG("p->payload = %s", p->payload);
-    p->expected_result = verification_result_ok;
+    sprintf(res_buf, "%d", *res);
+    sprintf(buf, "RESULT %s %s" SUFFIX "%s", *res < 0 ? "ERROR" : res_buf, 
+            extra_space, bad_suffix);
+    p->payload = strdup(buf);
+    LOG("p->payload = %s vr = %s", p->payload, code2str(vr));
+    p->expected_result = vr; 
     return p;
 }
 
 static packet_t *teardown_to_server(verification_result_t vr, void *data)
 {
     packet_t *p = calloc(1, sizeof(packet_t));
+    char buf[MAXBUFF] = { 0 };
+    char *extra_space = EXTRA_SPACE(vr);
+    char *bad_suffix = BAD_SUFFIX(vr);
 
-    p->payload = strdup("OK CLOSE " SUFFIX);
-    LOG("p->payload = %s", p->payload);
-    p->expected_result = verification_result_ok;
+    sprintf(buf, "OK CLOSE %s" SUFFIX "%s", extra_space, bad_suffix);
+    p->payload = strdup(buf);
+    LOG("p->payload = %s vr = %s", p->payload, code2str(vr));
+    p->expected_result = vr; 
     return p;
 }
 
@@ -191,16 +265,15 @@ static void get_needed_error(int *on_verification_result,
     static int stage_to_fuck_up = proto_stages_handshake_to_server;
     static int verification_result = verification_result_space;
 
-again:
     stage_to_fuck_up = (stage_to_fuck_up + 1 ) % proto_stages_max;
     verification_result = (verification_result + 1) % verification_result_max;
     if (!verification_result) {
         verification_result = !verification_result;
     }
-    if ((stage_to_fuck_up != proto_stages_op_to_server || 
-         stage_to_fuck_up != proto_stages_op_from_server) && 
-        verification_result == verification_result_overflow) {
-        goto again;
+    if (stage_to_fuck_up == proto_stages_op_to_server) {
+        verification_result = verification_result_overflow;
+    } else if (verification_result == verification_result_overflow) {
+        verification_result++;
     }
     *on_verification_result = verification_result;
     *on_stage = stage_to_fuck_up;
@@ -249,7 +322,7 @@ static void create_transactions(void)
     proto_stages_descs[proto_stages_op_from_server].spec_data = 
         (void *)&res;
     for (i = 0; i < NUM_OF_TRANSACTIONS; i++) {
-        int fuck_it_up = !(i % 5);
+        int fuck_it_up = !(i % 2);
         transaction_t *t = create_single_transaction(fuck_it_up);
 
         t->next = transactions;
@@ -274,26 +347,6 @@ static void register_cbs(void)
         } else {
             priv_data = malloc(ic.priv_data_size);
         }
-    }
-}
-
-static char *code2str(verification_result_t vr)
-{
-    switch (vr) {
-    default:
-        return "UNKNOWN";
-
-    case verification_result_ok:
-        return "verification_result_ok";
-
-    case  verification_result_space:
-	    return "verification_result_space";
-
-    case verification_result_overflow:
-	    return "verification_result_overflow";
-
-    case verification_result_bad_suffix:
-	    return "verification_result_bad_suffix";
     }
 }
 

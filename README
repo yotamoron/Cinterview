@@ -1,7 +1,7 @@
 For our new high performance distributed calculator, we have fomulated the 
 following protocol:
 - Handshake:
-    - Client → Server:
+    - Client → Server (handshake):
         - “START_TRANSACTION [SECURED|SEPARATE|SCRAP]”
           The client is asking the server to start a transaction, with one of 
           the three modes:
@@ -13,11 +13,11 @@ following protocol:
             Scrap any info that have been saved during the transaction
         - START_TRANSACTION and the desired mode are always one space separated
         - An example: “START_TRANSACTION SCRAP”
-    - Server → Client:
+    - Server → Client (handshake):
         - “[SECURED|SEPARATE|SCRAP]”
           The server sends back the mode that the client asked
         - An example: “SEPARATE”
-    - Operator and arguments:
+    - Client → Server (Operator and arguments):
         Next the client sends to the server the operator that needs to be to 
         applied and the arguments.
         The operator is one of: “[PLUS|MINUS|TIMES|DIVIDE]”
@@ -25,7 +25,8 @@ following protocol:
         0 and 65535).
         The operator and the numbers are each exactly one space separated
         - An example: “PLUS 4325 983 0”
-    - The server makes the needed calculations, and returns an answer to the 
+    - Server → Client (Operator and arguments):
+      The server makes the needed calculations, and returns an answer to the 
       client.
         - The answer is always prefixed by the string “RESULT”, with the 
           actual result following
@@ -34,44 +35,33 @@ following protocol:
           (division by zero for example) or is bigger than 65535/smaller than 0
         - The string RESULT and the actual result are always exactly one space 
           separated
-    - The client sends the string “OK CLOSE” to the server
-    - The server sends the string “CLOSED” to the client and concludes the 
-      transaction.
-
-General notes:
-- Each and every request/respone MUST have a suffix “ VON_NEUMANN” (note 
-  the space before the V)
-- Packets are all null-terminated strings.
-- You are not allowed to allocate any dynamic memory (malloc, realloc etc)
-- No static variables
-- Building the executable is done by executing ‘make’ in the relevant directory
-- You can access the internet freely
+    - Client → Server (Teardown):
+        - The client sends the string “OK CLOSE” to the server
+    - Server → Client (Teardown):
+        - The server sends the string “CLOSED” to the client and concludes the 
+          transaction.
 
 Your job: Write a verification plugin.
 Your plugin will have an init() function that will be called by the server. 
 The init() signature is:
 
-
 typedef enum {
         /* Packet has been verified */
         verification_result_ok = 0,
+
         /* There’s a space missing somewhere */
         verification_result_no_space = 1,
-        /* 
-         * Unknown or wrong keyword (EROR instead of ERROR or “OK” instead
-         * of “OK CLOSE” etc
-         */
-        verification_result_wrong_keyword = 2,
+
         /* A number is smaller than 0 or bigger than 65535 */
-        verification_result_overflow = 3,
+        verification_result_overflow = 2,
+
         /* A packet’s suffix missing or corrupted */
-        verification_result_bad_suffix = 4
+        verification_result_bad_suffix = 3,
         verification_result_max
 } verification_result_t;
 
 /* Prototype of the function that will actually do the function verification */
 typedef verification_result_t (*verify_packet_t)(char *packet, void *priv_data);
-
 
 /* 
  * Prototype of the function that will initialize the private data before 
@@ -88,11 +78,20 @@ always sequential, meaning the order of the packets is always as it should be
 as described by the protocol. 
 Your verification function will have to return the appropriate return values.
 If you find an error which is not described in one of the error codes, return 
-the ‘ok’ code.
-
+the ‘verification_result_ok ’ code.
 
 You goals:
 - 100% pass rate. The code will stop when the verification process fails (not 
   detecting an error or detecting a non-existant error)
 - The code must run under 1 second
 - Clean code will make the interviewer very happy.
+
+General notes:
+- Each and every request/respone MUST have a suffix “ VON_NEUMANN” (note 
+  the space before the 'V')
+- Packets are all null-terminated strings.
+- You are not allowed to allocate any dynamic memory (malloc, realloc etc)
+- No static variables
+- Building the executable is done by executing ‘make’ in the relevant directory
+- You can access the internet freely
+- You are not allowed to change the packets you receive
