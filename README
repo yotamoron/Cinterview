@@ -1,45 +1,44 @@
 For our new high performance distributed calculator, we have fomulated the 
 following protocol:
-- Handshake:
-    - Client → Server (handshake):
-        - “START_TRANSACTION [SECURED|SEPARATE|SCRAP]”
-          The client is asking the server to start a transaction, with one of 
-          the three modes:
-          - SECURED:
-            Encrypt any data on the server side
-          - SEPARATE:
-            Save this transaction’s details in a separate file
-          - SCRAP:
-            Scrap any info that have been saved during the transaction
-        - START_TRANSACTION and the desired mode are always one space separated
-        - An example: “START_TRANSACTION SCRAP”
-    - Server → Client (handshake):
-        - “[SECURED|SEPARATE|SCRAP]”
-          The server sends back the mode that the client asked
-        - An example: “SEPARATE”
-    - Client → Server (Operator and arguments):
-        Next the client sends to the server the operator that needs to be to 
-        applied and the arguments.
-        The operator is one of: “[PLUS|MINUS|TIMES|DIVIDE]”
-        The arguments are always positive numbers, between 0-65535 (including 
-        0 and 65535).
-        The operator and the numbers are each exactly one space separated
-        - An example: “PLUS 4325 983 0”
-    - Server → Client (Operator and arguments):
-      The server makes the needed calculations, and returns an answer to the 
-      client.
-        - The answer is always prefixed by the string “RESULT”, with the 
-          actual result following
-        - The result is always a round number between 0-65535 (including), 
-          OR the string “ERROR” is the result couldn’t have been calculated 
-          (division by zero for example) or is bigger than 65535/smaller than 0
-        - The string RESULT and the actual result are always exactly one space 
-          separated
-    - Client → Server (Teardown):
-        - The client sends the string “OK CLOSE” to the server
-    - Server → Client (Teardown):
-        - The server sends the string “CLOSED” to the client and concludes the 
-          transaction.
+- Client → Server (handshake):
+    - “START_TRANSACTION [SECURED|SEPARATE|SCRAP]”
+      The client is asking the server to start a transaction, with one of 
+      the three modes:
+      - SECURED:
+        Encrypt any data on the server side
+      - SEPARATE:
+        Save this transaction’s details in a separate file
+      - SCRAP:
+        Scrap any info that have been saved during the transaction
+    - START_TRANSACTION and the desired mode are always one space separated
+    - An example: “START_TRANSACTION SCRAP”
+- Server → Client (handshake):
+    - “[SECURED|SEPARATE|SCRAP]”
+      The server sends back the mode that the client asked
+    - An example: “SEPARATE”
+- Client → Server (Operator and arguments):
+    Next the client sends to the server the operator that needs to be to 
+    applied and the arguments.
+    The operator is one of: “[PLUS|MINUS|TIMES|DIVIDE]”
+    The arguments are always positive numbers, between 0-65535 (including 
+    0 and 65535).
+    The operator and the numbers are each exactly one space separated
+    - An example: “PLUS 4325 983 0”
+- Server → Client (Operator and arguments):
+  The server makes the needed calculations, and returns an answer to the 
+  client.
+    - The answer is always prefixed by the string “RESULT”, with the 
+      actual result following
+    - The result is always a round number between 0-65535 (including), 
+      OR the string “ERROR” is the result couldn’t have been calculated 
+      (division by zero for example) or is bigger than 65535/smaller than 0
+    - The string RESULT and the actual result are always exactly one space 
+      separated
+- Client → Server (Teardown):
+    - The client sends the string “OK CLOSE” to the server
+- Server → Client (Teardown):
+    - The server sends the string “CLOSED” to the client and concludes the 
+      transaction.
 
 Your job: Write a verification plugin.
 Your plugin will have an init() function that will be called by the server. 
