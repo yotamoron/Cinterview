@@ -102,6 +102,8 @@ below.
 
   typedef verification_result_t (*verification_plugin_verify_packet_t)(char *packet, void *priv_data);
 
+Upon faulty packet, the entire flow is terminated and the next packet arriving
+to the verification plugin would be of a new flow.
 
 3. close():
 
