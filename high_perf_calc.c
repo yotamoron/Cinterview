@@ -224,10 +224,14 @@ static packet_t *teardown_to_server(verification_result_t vr, void *data)
 static packet_t *teardown_from_server(verification_result_t vr, void *data)
 {
     packet_t *p = calloc(1, sizeof(packet_t));
+    char buf[MAXBUFF] = { 0 };
+    char *extra_space = EXTRA_SPACE(vr);
+    char *bad_suffix = BAD_SUFFIX(vr);
 
-    p->payload = strdup("CLOSED " SUFFIX);
-    LOG("p->payload = %s", p->payload);
-    p->expected_result = verification_result_ok;
+    sprintf(buf, "CLOSED %s" SUFFIX "%s", extra_space, bad_suffix);
+    p->payload = strdup(buf);
+    LOG("p->payload = %s vr = %s", p->payload, code2str(vr));
+    p->expected_result = vr; 
     return p;
 }
 
