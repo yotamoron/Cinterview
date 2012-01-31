@@ -22,6 +22,8 @@
 #include <sys/time.h>
 #include <string.h>
 
+extern verification_plugin_t my_plugin;
+
 #if 0
 #define LOG(fmt, args...)           \
     printf("\t%s():%d\t" fmt "\n", __func__, __LINE__, ##args)
@@ -54,9 +56,6 @@ typedef struct transaction_t {
     packet_t *packets;
 } transaction_t;
 
-static init_ctx_t ic = { 0 };
-static char *priv_data = NULL;
-
 static transaction_t *transactions = NULL;
 
 typedef enum {
@@ -81,6 +80,9 @@ static char *trans_types[trans_type_max] = {
     [trans_type_separate] = SEPARATE,
     [trans_type_scrap] = SCRAP
 };
+
+static void *priv_data = NULL;
+
 static char *code2str(verification_result_t vr)
 {
     switch (vr) {
@@ -109,8 +111,8 @@ static packet_t *handshake_to_server(verification_result_t vr, void *data)
     char *extra_space = EXTRA_SPACE(vr);
     char *bad_suffix = BAD_SUFFIX(vr);
 
-    sprintf(buf, TRANS_TYPE_PREFIX " %s %s" SUFFIX "%s", trans_types[curr_trans_type],
-            extra_space, bad_suffix);
+    sprintf(buf, TRANS_TYPE_PREFIX " %s %s" SUFFIX "%s", 
+            trans_types[curr_trans_type], extra_space, bad_suffix);
 
     p->payload = strdup(buf);
     p->expected_result = vr;
@@ -335,25 +337,6 @@ static void create_transactions(void)
     }
 }
 
-static void register_cbs(void)
-{
-    init(&ic);
-
-    if (!ic.vp) {
-        printf("No verification callback, exiting\n");
-        exit(-1);
-    }
-
-    if (ic.ipd) {
-        if (!ic.priv_data_size || ic.priv_data_size < 0) {
-            printf("WARNING: init_priv_data registered but priv_data size is"
-                   " 0 or smaller than 0\n");
-        } else {
-            priv_data = malloc(ic.priv_data_size);
-        }
-    }
-}
-
 static void run_verification(void)
 {
     transaction_t *t = transactions;
@@ -361,11 +344,8 @@ static void run_verification(void)
     while (t) {
         packet_t *p = t->packets;
 
-        if (ic.ipd) {
-            ic.ipd(priv_data);
-        }
         while (p) {
-            verification_result_t vr = ic.vp(p->payload, priv_data);
+            verification_result_t vr = my_plugin.verify(p->payload, priv_data);
 
             if (vr != p->expected_result) {
                 printf("On payload \"%s\": expected \"%s\" but received "
@@ -420,11 +400,14 @@ int main()
 
     create_transactions();
 
-    register_cbs();
+    priv_data = my_plugin.init ? my_plugin.init() : NULL;
 
     gettimeofday(&time_before_test, NULL);
     run_verification();
     gettimeofday(&time_after_test, NULL);
+
+    if (my_plugin.close)
+        my_plugin.close(priv_data);
 
     print_time_diff(&time_before_test, &time_after_test);
     free_all();

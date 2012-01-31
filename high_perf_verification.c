@@ -17,25 +17,33 @@
 
 #include "high_perf_calc.h"
 
-typedef struct {
-    int i;
-} priv_data_t;
+#include <stdlib.h>
 
-static verification_result_t verify_packet(char *packet, void *priv_data)
+static void *plugin_init(void)
 {
+    /* YOUR CODE HERE */
+
+    return NULL;
+}
+
+static verification_result_t plugin_verify(char *packet, void *priv_data)
+{
+    /* YOUR CODE HERE */
+
     return verification_result_ok;
 }
 
-static void init_priv_data(void *priv_data)
+static void plugin_close(void *priv_data)
 {
-    priv_data_t *dpd = priv_data;
+    /* YOUR CODE HERE */
 
-    dpd->i = 0;
+    return;
 }
 
-void init(init_ctx_t *ic)
-{
-    ic->vp = verify_packet;
-    ic->ipd = init_priv_data;
-    ic->priv_data_size = sizeof(priv_data_t);
-}
+verification_plugin_t my_plugin = {
+    .plugin_name = "MY PLUGIN",
+    .init = plugin_init,
+    .verify = plugin_verify,
+    .close = plugin_close
+};
+

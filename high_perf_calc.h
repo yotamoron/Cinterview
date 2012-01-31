@@ -30,25 +30,26 @@ typedef enum {
 
 	/* A packet’s suffix missing or corrupted */
 	verification_result_bad_suffix = 3,
+		
+    /* ... Any more ? ... */
 
 	verification_result_max
 } verification_result_t;
 
-/* Prototype of the function that will actually do the function verification */
-typedef verification_result_t (*verify_packet_t)(char *packet, void *priv_data);
+/* Any initiation to be done */
+typedef void *(*verification_plugin_init_t)(void);
 
-/* 
- * Prototype of the function that will initialize the private data before 
- * starting the verification process
- */
-typedef void (*init_priv_data_t)(void *priv_data);
+/* Called on each packet for verification */
+  typedef verification_result_t (*verification_plugin_verify_packet_t)(char *packet, void *priv_data);
 
-typedef struct {
-    init_priv_data_t ipd;
-    verify_packet_t vp;
-    int priv_data_size;
-} init_ctx_t;
+/* Close and free whatever needed */
+typedef void (*verification_plugin_close_t)(void *priv_data);
 
-void init(init_ctx_t *ic);
+typedef struct verification_plugin_t {
+  char                                *plugin_name;
+  verification_plugin_init_t          init;
+  verification_plugin_verify_packet_t verify;
+  verification_plugin_close_t         close;
+} verification_plugin_t;
 
 #endif /* __HIGH_PERF_CALC_H__ */

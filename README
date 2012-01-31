@@ -53,83 +53,84 @@ Your plugin will have a lifecycle: INIT -> VERIFY -> CLOSE.
 The server will:
 1. Call an INIT function once, to create and initialize the plugin instance.
 2. Call a VERIFY function zero or more times, to process lines/packets of the
-protocol detailed above.
+   protocol detailed above.
 3. Finally, invoke a CLOSE function in order to clean up and shutdown the plugin
-instance.
+   instance.
 
-Each stage in the lifecycle will be represented by a function, as detailed below.
+Each stage in the lifecycle will be represented by a function, as detailed 
+below.
 
 1. init():
-Your plugin will have an init() function that will be called by the server. 
-The init() signature is:
+  Your plugin will have an init() function that will be called by the server. 
+  The init() signature is:
 
-/* 
- * Prototype of the function that will initialize the private data before 
- * starting the verification process
- */
-typedef void *(*verification_plugin_init_t)();
+  /* 
+   * Prototype of the function that will initialize the private data before 
+   * starting the verification process
+   */
+  typedef void *(*verification_plugin_init_t)();
 
-The init() function will be called once in order to create the calculator backend,
-and is expected to return a pointer 'priv_data', which will be returned on 
-every call to the 'verify' and 'close' functions.
-
+  The init() function will be called once in order to create the calculator 
+  backend, and is expected to return a pointer 'priv_data', which will be 
+  returned on every call to the 'verify' and 'close' functions.
 
 2. verify_packet():
-For the verification stage, the plugin will contain a function for verifying
-a packet (as detailed above). The Server promises to call this function
-with complete lines/packets. Of course, packets are all null-terminated strings.
-The packet data may NOT be changed by this function.
-The function will return a value of the type 'verification_result_t'.
+  For the verification stage, the plugin will contain a function for verifying
+  a packet (as detailed above). The Server promises to call this function
+  with complete lines/packets. Of course, packets are all null-terminated 
+  strings. The packet data may NOT be changed by this function.
+  The function will return a value of the type 'verification_result_t'.
 
-typedef enum {
-        /* Packet has been verified */
-        verification_result_ok = 0,
+  typedef enum {
+      /* Packet has been verified */
+      verification_result_ok = 0,
 
-        /* There’s a space missing somewhere */
-        verification_result_no_space = 1,
+      /* There’s a space missing somewhere */
+      verification_result_no_space = 1,
 
-        /* A number is smaller than 0 or bigger than 65535 */
-        verification_result_overflow = 2,
+      /* A number is smaller than 0 or bigger than 65535 */
+      verification_result_overflow = 2,
 
-        /* A packet’s suffix missing or corrupted */
-        verification_result_bad_suffix = 3,
+      /* A packet’s suffix missing or corrupted */
+      verification_result_bad_suffix = 3,
 		
-		/* ... any more? ... */
+	  /* ... Any more ? ... */
 		
-        verification_result_max
+      verification_result_max
 		
-} verification_result_t;
+  } verification_result_t;
 
-typedef verification_result_t (*verification_plugin_verify_packet_t)(char *packet, void *priv_data);
+  typedef verification_result_t (*verification_plugin_verify_packet_t)(char *packet, void *priv_data);
 
 
 3. close():
 
-For the shutdown stage, a function with the following signature will be declared:
+  For the shutdown stage, a function with the following signature will be 
+  declared:
 
-typedef void (*verification_plugin_close_t)(void *priv_data);
+  typedef void (*verification_plugin_close_t)(void *priv_data);
 
-This function must perform all cleanup operations.
+  This function must perform all cleanup operations.
 
+plugin module:
+==============
 
-+. plugin module:
+The module may only export a single global variable - 'my_plugin' - 
+referencing the plugin structure, of the type:
 
-The module may only export a single global variable - 'my_plugin' - referencing the plugin
-structure, of the type:
-
-typedef struct verification_plugin_t {
-	char                                *plugin_name;
-	verification_plugin_init_t          init;
-	verification_plugin_verify_packet_t verify;
-	verification_plugin_close_t         close;
-} verification_plugin_t;
+  typedef struct verification_plugin_t {
+      char                                *plugin_name;
+      verification_plugin_init_t          init;
+	  verification_plugin_verify_packet_t verify;
+	  verification_plugin_close_t         close;
+  } verification_plugin_t;
 
 
 ----------------------------
 
 You goals:
-- 100% accuracy. The test run will terminate if the verification process returns
-an incorrect result (i.e. false positive/negative).
+- 100% accuracy. The test run will terminate if the verification process 
+  return an incorrect result (i.e. false positive/negative).
 - The code must run under 1 second on the designated input, on the test machine.
 - Clean code will make the interviewer very happy.
 
