@@ -67,7 +67,7 @@ The init() signature is:
  * Prototype of the function that will initialize the private data before 
  * starting the verification process
  */
-typedef void (*verification_plugin_init_t)();
+typedef void *(*verification_plugin_init_t)();
 
 The init() function will be called once in order to create the calculator backend,
 and is expected to return a pointer 'priv_data', which will be returned on 
