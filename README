@@ -94,7 +94,7 @@ below.
       /* A packet’s suffix missing or corrupted */
       verification_result_bad_suffix = 3,
 		
-	  /* ... Any more ? ... */
+      /* ... Any more ? ... */
 		
       verification_result_max
 		
@@ -123,8 +123,8 @@ referencing the plugin structure, of the type:
   typedef struct verification_plugin_t {
       char                                *plugin_name;
       verification_plugin_init_t          init;
-	  verification_plugin_verify_packet_t verify;
-	  verification_plugin_close_t         close;
+      verification_plugin_verify_packet_t verify;
+      verification_plugin_close_t         close;
   } verification_plugin_t;
 
 
