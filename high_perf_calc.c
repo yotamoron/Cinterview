@@ -177,7 +177,7 @@ static packet_t *op_to_server(verification_result_t vr, void *data)
     };
 
     if (vr == verification_result_overflow) {
-        n2 += (65355 * curr_overflow);
+        n2 += (65535 * curr_overflow);
         curr_overflow *= -1;
     }
 
