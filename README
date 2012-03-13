@@ -21,10 +21,10 @@ following protocol:
     Next the client sends to the server the operator that needs to be to 
     applied and the arguments.
     The operator is one of: “[PLUS|MINUS|TIMES|DIVIDE]”
-    The arguments are always positive numbers, between 0-65535 (including 
+    The arguments are always 2 positive numbers, between 0-65535 (including 
     0 and 65535).
     The operator and the numbers are each exactly one space separated
-    - An example: “PLUS 4325 983 0”
+    - An example: “PLUS 4325 983”
 - Server → Client (Operator and arguments):
   The server makes the needed calculations, and returns an answer to the 
   client.
@@ -85,8 +85,8 @@ below.
       /* Packet has been verified */
       verification_result_ok = 0,
 
-      /* There’s a space missing somewhere */
-      verification_result_no_space = 1,
+      /* There’s a space issue somewhere */
+      verification_result_space = 1,
 
       /* A number is smaller than 0 or bigger than 65535 */
       verification_result_overflow = 2,
@@ -134,5 +134,6 @@ You goals:
 - 100% accuracy. The test run will terminate if the verification process 
   return an incorrect result (i.e. false positive/negative).
 - The code must run under 1 second on the designated input, on the test machine.
+- The verification process MUST NOT change the content of any non-private input
 - Clean code will make the interviewer very happy.
 
