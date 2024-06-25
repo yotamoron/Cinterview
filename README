@@ -18,7 +18,7 @@ following protocol:
       The server sends back the mode that the client asked
     - An example: “SEPARATE”
 - Client → Server (Operator and arguments):
-    Next the client sends to the server the operator that needs to be to 
+    Next the client sends to the server the operator that needs to be 
     applied and the arguments.
     The operator is one of: “[PLUS|MINUS|TIMES|DIVIDE]”
     The arguments are always 2 positive numbers, between 0-65535 (including 
