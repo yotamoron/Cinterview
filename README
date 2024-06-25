@@ -1,4 +1,4 @@
-For our new high performance distributed calculator, we have fomulated the 
+For our new high performance distributed calculator, we have formulated the 
 following protocol:
 
 - Client → Server (handshake):
